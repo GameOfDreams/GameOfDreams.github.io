@@ -1,22 +1,352 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
-    <title>Dreaming Machine</title>
+	<title>Machine's Dream</title>
+	<style type="text/css">
+		body {
+			margin: 0;
+			background-color: #ffffff;
+			min-height: 100vh;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+		canvas {
+			min-height: 100vh;
+		}
+		img {
+			opacity: 0;
+		}
+		footer {
+			position: fixed;
+			bottom: 0;
+			left: 0;
+			right: 0;
+			text-align: center;
+		}
+		button {
+			padding: 20px;
+			font-size: 20px;
+			background-color: black;
+			color: white;
+			border: none;
+		}
+	</style>
 </head>
-    <body>
-        <h1> Game of Life </h1>
-        <div class="buttons-div">
-            <button id="start-random">Start random</button>
-            <button id="stop">Stop</button>
-        </div>
+<body>
+<canvas id="canvas"></canvas>
+<img id="image" src="res/image.png"> <!-- Image ici -->
+<footer>
+	<button id="controller">Start</button>
+	<button id="random">Randomize</button>
+	<button id="base">Normal</button>
+	<button id="dream">Dream</button>
+	<button id="nightmare">Nightmare</button>
+</footer>
+<script type="text/javascript">
+	var speed = 100;
+	var ruleD1 = 4;
+	var ruleD2 = 3;
+	var ruleL1 = 3;
+	var musicTime= 4;
+	var canvas = document.getElementById('canvas')
+	var ctx = canvas.getContext('2d')
+	var image = document.getElementById('image')
+	var controller = document.getElementById('controller')
+	var random = document.getElementById('random')
+	var dreamButton = document.getElementById('dream')
+	var baseButton = document.getElementById('base')
+	var nightmareButton = document.getElementById('nightmare')
+	var matrix = [], nextMatrix = [], x, y, total, pixel, running = false, started = false;
+	var audio;
+	var chords;
+	var chordsCount = 0;
+	var mood;
 
-        <canvas id="gamefield" width="500" height="500"></canvas>
-    </body>
+	var interVar;
 
-    <script src="GameOfLife.js"></script>
-    <script src="index.js"></script>
+	var base = {
+		mood: "base",
+		colors: [
+		"#cccccc",
+		"#8a8681",
+		"#4a4542",
+		"#040c07"
+		],
+		bg: "#FFFFFF",
+		sounds: [
+		"res/BC3.mp3",
+		"res/BD3.mp3",
+		"res/BE3.mp3",
+		"res/BF3.mp3",
+		"res/BG3.mp3",
+		"res/BA3.mp3",
+		"res/BB3.mp3",
+		"res/BC4.mp3"
+		],
+		chords: [
+		"res/BCHORD1.mp3",
+		"res/BCHORD2.mp3",
+		"res/BCHORD3.mp3",
+		"res/BCHORD4.mp3",
+		"res/BCHORD5.mp3",
+		"res/BCHORD6.mp3",
+		"res/BCHORD7.mp3"
+		],
+		speed: 300,
+		musicTime: 2,
+		chordTime: 9,
+	}
+
+	var dream = {
+		mood: "dream",
+		colors: [
+		"#C2E3EC",
+		"#FBD7B7",
+		"#ECB4BF",
+		"#C6ACC7"
+		],
+		bg: "#C2E3EC",
+		sounds: [
+		"res/DC2.mp3",
+		"res/DD2.mp3",
+		"res/DE2.mp3",
+		"res/DF2.mp3",
+		"res/DG2.mp3",
+		"res/DA2.mp3",
+		"res/DB2.mp3",
+		"res/DC3.mp3"
+		],
+		chords: [
+		"res/DCHORD1.mp3",
+		"res/DCHORD2.mp3",
+		"res/DCHORD3.mp3",
+		"res/DCHORD4.mp3"
+		],
+		speed: 400,
+		musicTime: 6,
+		chordTime: 4,
+	}
+
+	var nightmare = {
+		mood: "nightmare",
+		colors: [
+		"#83173d",
+		"#36051a",
+		"#d0172a",
+		"#d44057"
+		],
+		bg: "#4d101a",
+		sounds: [
+			"res/NC2.mp3",
+			"res/ND2.mp3",
+			"res/NE2.mp3",
+			"res/NG2.mp3",
+			"res/NA2.mp3",
+			"res/NC3.mp3"
+		],
+		chords: [],
+		speed: 100,
+		musicTime: 1
+	}
+
+
+	function init() {
+		canvas.width = image.width;
+		canvas.height = image.height;
+		ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
+
+		// On masque l'image
+		image.style.display = 'none'
+		mood = base;
+		document.body.style.backgroundColor = mood.bg;
+		for (x = 0; x < canvas.width; x++) {
+			matrix[x] = []
+			for (y = 0; y < canvas.height; y++) {
+				pixel = ctx.getImageData(x, y, 1, 1).data;
+				matrix[x][y] = isWhite(pixel) ? 0 : 4;
+			}
+		}
+
+		interVar = window.setInterval(interval, mood.speed);
+	}
+
+	function interval(){
+		if (running)
+			step()
+			//console.log("tic");
+	}
+
+	function fake() {
+		for (x = 0; x < matrix.length; x++) {
+			for (y = 0; y < matrix[x].length; y++) {
+				matrix[x][y] = Math.random() > 0.8 ? 4 : 0;
+			}
+		}
+	}
+
+	function isWhite(pixel) {
+		return (pixel[0] > 210 && pixel[1] > 210 && pixel[2] > 210) || pixel[4] === 0
+	}
+
+	// On avance !
+	function step() {
+		nextMatrix = matrix
+
+		for (x = 0; x < matrix.length; x++) {
+			for (y = 0; y < matrix[x].length; y++) {
+				nextMatrix[x][y] = getCellNewState(x, y);
+			}
+		}
+
+		matrix = nextMatrix;
+		draw();
+		musicTime --;
+		//console.log(musicTime);
+		if(mood.mood === "dream"){
+			var rythm = [1,3,4,5,6];
+			if(rythm.includes(musicTime)){
+				audio = new Audio(mood.sounds[Math.floor(Math.random()*mood.sounds.length)]);
+				audio.play();
+			}
+			if(musicTime <= 0){
+				console.log(chordsCount);
+				if(chordsCount===4){
+					chordsCount = 0;
+				}
+				chords = new Audio(mood.chords[chordsCount]);
+				chords.play();
+				chordsCount++;
+				musicTime = mood.musicTime;
+			}
+		}
+		else if(mood.mood === "base")
+		{
+			if(musicTime <= 0){
+				audio = new Audio(mood.sounds[Math.floor(Math.random()*mood.sounds.length)]);
+				audio.play();
+				musicTime = mood.musicTime;
+			}
+			if(chordsCount < 0){
+				chordsCount=mood.chordTime;
+				chords = new Audio(mood.chords[Math.floor(Math.random()*mood.chords.length)]);
+				chords.play();
+				
+			}
+			chordsCount--;
+		}
+		else
+		{
+			
+			if(musicTime <= 0){
+				audio = new Audio(mood.sounds[Math.floor(Math.random()*mood.sounds.length)]);
+				audio.play();
+				musicTime = mood.musicTime;
+			}
+			
+		}				
+		
+	}
+
+	// Calcul le nouvel état d'un pixel
+	function getCellNewState(x, y) {
+		total = 0;
+		total += this.getCellState(x - 1, y - 1);
+		total += this.getCellState(x - 1, y);
+		total += this.getCellState(x - 1, y + 1);
+		total += this.getCellState(x, y - 1);
+		total += this.getCellState(x, y + 1);
+		total += this.getCellState(x + 1, y - 1);
+		total += this.getCellState(x + 1, y);
+		total += this.getCellState(x + 1, y + 1);
+
+		return ((total===0 && matrix[x][y]===4) ? 4 :
+			total > ruleD1 || total < ruleD2) 
+				? Math.max(0, matrix[x][y] - 1) 
+				: (
+					(matrix[x][y] < 4 && total === ruleL1) ? 4 
+					: (matrix[x][y] > 0 && matrix[x][y] < 4 ? matrix[x][y] - 1 : matrix[x][y])
+				);
+	}
+
+	// Récupère l'état courant d'un pixel
+	function getCellState(x, y) {
+		try {
+			return matrix[x][y] === 4 ? 1 : 0
+		} catch (e) {
+			return 0;
+		}
+	}
+
+	// Dessine la matrice
+	function draw() {
+		ctx.clearRect(0, 0, canvas.width, canvas.height)
+		//ctx.fillStyle = "purple";
+		for (x = 0; x < matrix.length; x++) {
+			for (y = 0; y < matrix[x].length; y++) {
+				if (matrix[x][y] > 0) {
+					//ctx.fillRect(x, y, 1, 1);
+					ctx.fillStyle = mood.colors[matrix[x][y] - 1];
+				    ctx.beginPath();
+				    ctx.arc(x, y, 2, 0, 2 * Math.PI);
+				    ctx.fill();
+				}
+			}
+		}
+	}
+
+	controller.onclick = function() {
+		if (!started) {
+			ctx.clearRect(0, 0, canvas.width, canvas.height)
+			started = true
+		}
+		running = !running
+		controller.innerText = running ? "Pause" : "Start"
+	}
+
+	random.onclick = function() {
+		fake()
+		if (!running)
+			draw()
+	}
+
+	dreamButton.onclick = function(){
+		mood = dream;
+		//console.log(mood);
+		ruleD1 = 4;
+		ruleD2 = 3;
+		document.body.style.backgroundColor = mood.bg; 
+		clearInterval(interVar);
+		interVar = window.setInterval(interval, mood.speed);
+		chordsCount = 0;
+		musicTime = mood.musicTime;
+	}
+
+	baseButton.onclick = function(){
+		mood = base;
+		//console.log(mood);
+		ruleD1 = 4;
+		ruleD2 = 3;
+		document.body.style.backgroundColor = mood.bg;
+		clearInterval(interVar);
+		interVar = window.setInterval(interval, mood.speed);
+		musicTime = mood.musicTime;
+		chordsCount = mood.chordTime;
+	}
+
+	nightmareButton.onclick = function(){
+		mood = nightmare;
+		//console.log(mood);
+		ruleD1 = 3;
+		ruleD2 = 2;
+		document.body.style.backgroundColor = mood.bg;
+		clearInterval(interVar);
+		interVar = window.setInterval(interval, mood.speed);
+	}
+
+
+	// On lance l'algo une fois l'image chargée
+	image.onload = init
+</script>
+</body>
 </html>
